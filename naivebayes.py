@@ -1,37 +1,57 @@
+
+
+
 import pandas as pd
-from sklearn.preprocessing import LabelEncoder
-from sklearn.naive_bayes import CategoricalNB
-from sklearn.metrics import accuracy_score
+from sklearn.naive_bayes import GaussianNB
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import accuracy_score, classification_report, ConfusionMatrixDisplay
+import matplotlib.pyplot as plt
 
-# Read dataset from CSV file
-df = pd.read_csv("data.csv")
+# Load data from the CSV file
+try:
+    df = pd.read_csv("dataset.csv")
+    print("Dataset loaded successfully!")
+except FileNotFoundError:
+    print("Error: 'dataset.csv' file not found. Please check the file path.")
+    exit()
 
-# Remove RID column (not needed)
-df = df.drop("RID", axis=1)
+print("\nOriginal Dataset Preview:")
+print(df.head())
 
-# Encode categorical columns
-le = LabelEncoder()
-for c in df.columns:
-    df[c] = le.fit_transform(df[c])
+# Drop the Roll column since it's just an identifier, not a feature
+if "Roll" in df.columns:
+    df = df.drop("Roll", axis=1)
 
-# Features and Target
-X = df.drop("CLASS:BUYS_COMPUTER", axis=1)
-y = df["CLASS:BUYS_COMPUTER"]
+# Use One-Hot Encoding for categorical features
+df_encoded = pd.get_dummies(df, drop_first=True)
 
-# Train Naive Bayes model
-model = CategoricalNB()
-model.fit(X, y)
+# Separate features and target based on your exact CSV column name
+# pd.get_dummies appends '_Yes' to the target column 'Buys_Computer'
+target_col = "Buys_Computer_Yes" 
 
-# Predict
-y_pred = model.predict(X)
+X = df_encoded.drop(target_col, axis=1)
+y = df_encoded[target_col]
 
-# Display predictions
-print("Predictions:")
-print(y_pred)
+# Split data (test_size = 0.3)
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
 
-# Display accuracy
-print("Accuracy:", accuracy_score(y, y_pred))
+# Initialize and train Gaussian Naive Bayes
+model = GaussianNB()
+model.fit(X_train, y_train)
 
-# Display class probabilities
+# Make predictions
+y_pred = model.predict(X_test)
+
+# Evaluate model
+print("\nAccuracy:")
+print(accuracy_score(y_test, y_pred))
+print("\nClassification Report:")
+print(classification_report(y_test, y_pred))
+
+# Display Confusion Matrix
+ConfusionMatrixDisplay.from_estimator(model, X_test, y_test, cmap=plt.cm.Blues)
+plt.title("Naive Bayes - Buys Computer Dataset")
+plt.show()
+
 print("\nClass Probabilities:")
 print(model.predict_proba(X))
